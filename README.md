@@ -323,6 +323,9 @@ PHP_Laravel12_PDF/
 ---
 
 Your PHP_Laravel12_PDF Project is now ready!
+<<<<<<< HEAD
 
 
 
+=======
+>>>>>>> development

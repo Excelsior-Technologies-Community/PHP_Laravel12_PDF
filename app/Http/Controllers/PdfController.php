@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
-
+use App\Models\Invoice;
 use Illuminate\Http\Request;
 use Spatie\LaravelPdf\Facades\Pdf;
 use Illuminate\Support\Facades\Storage;
@@ -9,6 +9,48 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PdfController extends Controller
 {
+
+    // Show form
+    public function create()
+    {
+        return view('pdfs.create');
+    }
+
+    // Store data
+    public function store(Request $request)
+    {
+        $items = [];
+
+        foreach ($request->item_name as $key => $name) {
+            $items[] = [
+                'name' => $name,
+                'quantity' => $request->quantity[$key],
+                'price' => $request->price[$key],
+            ];
+        }
+
+        $total = array_sum(array_map(fn($i) => $i['quantity'] * $i['price'], $items));
+
+        $invoice = Invoice::create([
+            'customer_name' => $request->customer_name,
+            'items' => $items,
+            'total' => $total
+        ]);
+
+        return redirect('/pdf/' . $invoice->id);
+    }
+
+    // Generate PDF from DB (THIS IS MAIN CHANGE)
+    public function show($id)
+    {
+        $invoice = Invoice::findOrFail($id);
+
+        return Pdf::view('pdfs.invoice', compact('invoice'))
+            ->format('a4')
+            ->name('invoice.pdf');
+    }
+
+
     // Generate and stream PDF to browser
     public function generate()
     {
@@ -23,8 +65,8 @@ class PdfController extends Controller
         ];
 
         return Pdf::view('pdfs.invoice', ['invoice' => $invoice])
-                  ->format('a4')
-                  ->name('invoice.pdf'); // Streams PDF to browser
+            ->format('a4')
+            ->name('invoice.pdf'); // Streams PDF to browser
     }
 
     // Save PDF to storage folder and download
@@ -44,8 +86,8 @@ class PdfController extends Controller
 
         // Save PDF to storage
         Pdf::view('pdfs.invoice', ['invoice' => $invoice])
-           ->format('a4')
-           ->save($filePath);
+            ->format('a4')
+            ->save($filePath);
 
         // Return file as download
         return response()->download($filePath, 'invoice_saved.pdf', [
